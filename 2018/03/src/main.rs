@@ -1,5 +1,6 @@
 use std::io::{self, prelude::*};
 use regex::Regex;
+use std::collections::{HashSet};
 
 type Error = Box<std::error::Error>;
 
@@ -36,12 +37,14 @@ fn main() -> Result<(), Error> {
 }
 
 fn get_unique_claim<'a>(claims: &'a [Claim]) -> Option<&'a Claim> {
+    let mut overlaps: HashSet<u32> = HashSet::new();
     claims.iter().find_map(|claim| {
-        let has_overlap = claims.iter().any(|other| {
-            if other.id == claim.id {
-                false
+        let has_overlap = overlaps.contains(&claim.id) || claims.iter().any(|other| {
+            if other.id != claim.id  && claim.intersects(other) {
+                overlaps.insert(other.id);
+                true
             } else {
-                claim.intersects(other)
+                false
             }
         });
         if has_overlap {
@@ -61,8 +64,8 @@ fn get_overlap_area(claims: &[Claim]) -> usize {
             }
         }
     });
-    fabric.iter().fold(0, |acc, &overlap| {
-        if overlap > 1 {
+    fabric.iter().fold(0, |acc, &overlaps| {
+        if overlaps > 1 {
             acc + 1
         } else {
             acc
