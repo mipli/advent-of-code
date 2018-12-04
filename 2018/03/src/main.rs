@@ -38,9 +38,9 @@ fn main() -> Result<(), Error> {
 
 fn get_unique_claim<'a>(claims: &'a [Claim]) -> Option<&'a Claim> {
     let mut overlaps: HashSet<u32> = HashSet::new();
-    claims.iter().find_map(|claim| {
-        let has_overlap = overlaps.contains(&claim.id) || claims.iter().any(|other| {
-            if other.id != claim.id  && claim.intersects(other) {
+    claims.iter().enumerate().find_map(|(i, claim)| {
+        let has_overlap = overlaps.contains(&claim.id) || claims.iter().skip(i + 1).any(|other| {
+            if claim.intersects(other) {
                 overlaps.insert(other.id);
                 true
             } else {
@@ -56,21 +56,19 @@ fn get_unique_claim<'a>(claims: &'a [Claim]) -> Option<&'a Claim> {
 }
 
 fn get_overlap_area(claims: &[Claim]) -> usize {
-    let mut fabric = vec![0; 1000*1000];
-    claims.iter().for_each(|claim| {
-        for y in claim.top..claim.top+claim.height {
-            for x in claim.left..claim.left+claim.width {
-                fabric[(x + (y * 1000)) as usize] += 1;
+    claims
+        .iter()
+        .fold(vec![0; 1000*1000], |mut fabric, claim| {
+            for y in claim.top .. claim.top + claim.height {
+                for x in claim.left .. claim.left + claim.width {
+                    fabric[(x + (y * 1000)) as usize] += 1;
+                }
             }
-        }
-    });
-    fabric.iter().fold(0, |acc, &overlaps| {
-        if overlaps > 1 {
-            acc + 1
-        } else {
-            acc
-        }
-    })
+            fabric
+        })
+        .iter()
+        .filter(|&&cnt| cnt >= 2)
+        .count()
 }
 
 fn parse_input(input: &str) -> Result<Vec<Claim>, Error> {
